@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+.env
+*.env
+
+# Database
+*.sql
+*.db
+
+# IDE
+.idea/
+*.iml
+
+# OS generated files
+.DS_Store
+Thumbs.db
