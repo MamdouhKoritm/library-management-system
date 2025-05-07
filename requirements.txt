@@ -1,1 +1,5 @@
-mysql-connector-python==9.0.0 pylint==3.2.7 pytest==8.3.3 pytest-cov==5.0.0
+# Replace the content with:
+mysql-connector-python==9.0.0
+pylint==3.2.7
+pytest==8.3.3
+pytest-cov==5.0.0
