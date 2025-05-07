@@ -15,12 +15,12 @@ class TestLibraryApp(unittest.TestCase):
         mock_connect.return_value = mock_db
         mock_db.cursor.return_value = mock_cursor
 
-        # Mock cursor responses
+        # Mock cursor responses with proper tuple structure (e.g., (column_name, data_type, ...))
         mock_cursor.fetchone.side_effect = [
             None,  # SHOW TABLES LIKE 'BookRecord' -> Table doesn't exist
             None,  # SHOW COLUMNS FROM BookRecord LIKE 'Category' -> Column doesn't exist
             None,  # SHOW COLUMNS FROM BookRecord LIKE 'Price' -> Column doesn't exist
-            ('varchar(50)',),  # SHOW COLUMNS FROM BookRecord LIKE 'BookName' -> Correct length
+            ('BookName', 'varchar(50)', 'YES', '', None, ''),  # SHOW COLUMNS FROM BookRecord LIKE 'BookName'
             (0,),  # SELECT COUNT(*) FROM BookRecord -> Table is empty
             None,  # SHOW TABLES LIKE 'UserRecord' -> Table doesn't exist
             None,  # SHOW TABLES LIKE 'AdminRecord' -> Table doesn't exist
