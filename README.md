@@ -1,62 +1,85 @@
- A Python-based desktop application for managing a library, built with Tkinter, MySQL, and bcrypt.
+# Library Management System
 
- ## Features
- - **Admin**: Add/delete books, manage users, view feedback.
- - **User**: Register, log in, search/issue/return books, submit feedback.
- - **Security**: Passwords hashed with bcrypt.
- - **Testing**: Unit tests with pytest.
- - **CI/CD**: GitHub Actions for automated testing.
+A Python-based desktop application for managing a library, built with Tkinter and MySQL. The system supports admin and user functionalities, including book management, user management, book issuance, returns, fines, and feedback.
 
- ## Setup
- 1. **Prerequisites**:
-    - Python 3.10
-    - MySQL
-    - Git
+## Features
+- **Admin Features**:
+  - Manage books (add, delete, view)
+  - Manage users (add, remove, view, apply penalties)
+  - Manage admins (add, view)
+  - View feedback
+  - Generate reports (book usage, overdue fines)
+- **User Features**:
+  - Search and browse books
+  - Issue and return books
+  - View issued books
+  - Submit feedback
+- **Database**:
+  - MySQL database with tables for books, users, admins, and feedback
+  - Automatic initialization with sample data
 
- 2. **Clone Repository**:
-    ```bash
-    git clone https://github.com/MamdouhKoritm/library-management-system.git
-    cd library-management-system
-    ```
+## Prerequisites
+- Python 3.8+
+- MySQL Server
+- Required Python packages (listed in `requirements.txt`)
 
- 3. **Set Up Virtual Environment**:
-    ```bash
-    python -m venv venv
-    .\venv\Scripts\activate
-    pip install -r requirements.txt
-    ```
+## Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/library-management-system.git
+   cd library-management-system
+   ```
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Set up MySQL:
+   - Ensure MySQL is running.
+   - Update the database credentials in `db_connect.py` (default: host="localhost", user="root", passwd="@Mamdouh2").
+4. Run the application:
+   ```bash
+   python app.py
+   ```
 
- 4. **Configure MySQL**:
-    ```sql
-    CREATE DATABASE library_db;
-    CREATE USER 'libuser'@'localhost' IDENTIFIED BY 'libpass';
-    GRANT ALL PRIVILEGES ON library_db.* TO 'libuser'@'localhost';
-    ```
-    Create `.env`:
-    ```
-    MYSQL_HOST=localhost
-    MYSQL_USER=libuser
-    MYSQL_PASSWORD=libpass
-    MYSQL_DATABASE=library_db
-    ```
+## Project Structure
+- `app.py`: Main application logic and Tkinter GUI.
+- `db_connect.py`: Database connection and initialization.
+- `requirements.txt`: Python dependencies.
+- `.gitignore`: Files to ignore in Git.
+- `.github/workflows/ci.yml`: GitHub Actions CI/CD pipeline.
 
- 5. **Run Application**:
-    ```bash
-    python app.py
-    ```
+## CI/CD Pipeline
+The project includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that:
+- Lints the code using `flake8`.
+- Runs tests (placeholder for future test implementation).
+- Builds the project.
 
- 6. **Run Tests**:
-    ```bash
-    pytest --cov=./
-    ```
+To enable CI/CD:
+1. Push the code to a GitHub repository.
+2. Ensure the workflow file is in the `.github/workflows/` directory.
+3. The pipeline will run automatically on push or pull requests to the `main` branch.
 
- ## CI/CD
- - GitHub Actions runs pytest on every push/pull request.
- - Check the **Actions** tab for test results.
+## Database Setup
+The application automatically creates a `Library` database and the following tables:
+- `BookRecord`: Stores book details (BookID, BookName, Author, Publisher, Category, Price).
+- `UserRecord`: Stores user details and borrowing info (UserID, UserName, Password, BookID, BorrowDate, Fine).
+- `AdminRecord`: Stores admin credentials (AdminID, Password).
+- `Feedback`: Stores user feedback (Feedback, Rating).
 
- ## Contributing
- 1. Fork the repository.
- 2. Create a feature branch: `git checkout -b feature/your-feature`.
- 3. Commit changes: `git commit -m "Add your feature"`.
- 4. Push: `git push origin feature/your-feature`.
- 5. Open a pull request.
+Sample data is inserted during the first run if the tables are empty.
+
+## Usage
+- **Admin Login**: Use AdminID (e.g., "Kunal1020") and Password (e.g., "123").
+- **User Login**: Use UserID (e.g., "101") and Password (e.g., "1234").
+- **Create User Account**: Register new users via the login screen.
+- **Exit**: Closes the application.
+
+## Contributing
+1. Fork the repository.
+2. Create a feature branch (`git checkout -b feature-name`).
+3. Commit changes (`git commit -m "Add feature"`).
+4. Push to the branch (`git push origin feature-name`).
+5. Open a pull request.
+
+## License
+This project is licensed under the MIT License.
