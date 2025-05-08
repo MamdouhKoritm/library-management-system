@@ -33,11 +33,19 @@ jobs:
       run: |
         pylint app.py --exit-zero
 
-    - name: Run unit tests
+    - name: Run tests with coverage
       run: |
-        python -m unittest test_app.py
+        pytest --cov=app --cov-report=xml test_app.py
 
     - name: Verify imports
       run: |
         python -c "import tkinter; print('Tkinter imported successfully')"
         python -c "import mysql.connector; print('MySQL Connector imported successfully')"
+
+    - name: Upload coverage report
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage.xml
+        fail_ci_if_error: true
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
