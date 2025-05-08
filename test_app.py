@@ -1,43 +1,59 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import sys
+import os
 
 # Import LibraryApp from app.py
 sys.path.append(".")
 from app import LibraryApp, init_db
 
 class TestLibraryApp(unittest.TestCase):
-    @patch('mysql.connector.connect')
-    def test_init_db_success(self, mock_connect):
+    def setUp(self):
+        # Set TEST_MODE to use SQLite
+        os.environ["TEST_MODE"] = "1"
+
+    @patch('sys.exit')
+    @patch('builtins.print')
+    @patch('sqlite3.connect')
+    def test_init_db_success(self, mock_connect, mock_print, mock_exit):
         # Mock the database connection and cursor
         mock_db = MagicMock()
         mock_cursor = MagicMock()
         mock_connect.return_value = mock_db
         mock_db.cursor.return_value = mock_cursor
 
-        # Define side effects for fetchone() to match all calls in init_db()
+        # Define side effects for fetchone() to match all calls in init_db() with SQLite
         fetchone_side_effects = [
-            None,  # SHOW TABLES LIKE 'BookRecord'
-            None,  # SHOW COLUMNS FROM BookRecord LIKE 'Category'
-            None,  # SHOW COLUMNS FROM BookRecord LIKE 'Price'
-            ('BookName', 'varchar(50)', 'YES', '', None, ''),  # SHOW COLUMNS FROM BookRecord LIKE 'BookName'
+            None,  # SELECT name FROM sqlite_master WHERE type='table' AND name='BookRecord'
+            [('BookID', 'TEXT', 0, None, 1, None), ('BookName', 'TEXT', 1, None, 0, None), ('Author', 'TEXT', 2, None, 0, None), ('Publisher', 'TEXT', 3, None, 0, None), ('Category', 'TEXT', 4, None, 0, None), ('Price', 'REAL', 5, None, 0, None)],  # PRAGMA table_info(BookRecord)
+            None,  # PRAGMA table_info(BookRecord) for Category (after adding)
+            None,  # PRAGMA table_info(BookRecord) for Price (after adding)
             (0,),  # SELECT COUNT(*) FROM BookRecord
-            None,  # SHOW TABLES LIKE 'UserRecord'
-            None,  # SHOW TABLES LIKE 'AdminRecord'
-            None,  # SHOW TABLES LIKE 'Feedback'
-            None,  # SHOW COLUMNS FROM UserRecord LIKE 'BorrowDate' (first call)
-            None,  # SHOW COLUMNS FROM UserRecord LIKE 'Fine' (first call)
+            None,  # SELECT name FROM sqlite_master WHERE type='table' AND name='UserRecord'
+            None,  # PRAGMA table_info(UserRecord) for BorrowDate (after adding)
+            None,  # PRAGMA table_info(UserRecord) for Fine (after adding)
+            None,  # SELECT name FROM sqlite_master WHERE type='table' AND name='AdminRecord'
+            None,  # SELECT name FROM sqlite_master WHERE type='table' AND name='Feedback'
         ]
         mock_cursor.fetchone.side_effect = fetchone_side_effects
+
+        # Mock commit to avoid issues
+        mock_db.commit = MagicMock()
 
         # Instantiate LibraryApp to trigger initialize_database
         app = LibraryApp()
         app.initialize_database()
 
-        # Verify database setup calls
+        # Verify sys.exit() was not called
+        mock_exit.assert_not_called()
+
+        # Verify database setup calls with SQLite syntax
         mock_cursor.execute.assert_any_call("CREATE DATABASE IF NOT EXISTS Library")
         mock_cursor.execute.assert_any_call("USE Library")
-        mock_cursor.execute.assert_any_call("CREATE TABLE BookRecord(BookID varchar(10) PRIMARY KEY, BookName varchar(50), Author varchar(30), Publisher varchar(30), Category varchar(20), Price DECIMAL(10,2))")
+        mock_cursor.execute.assert_any_call("CREATE TABLE BookRecord(BookID TEXT PRIMARY KEY, BookName TEXT, Author TEXT, Publisher TEXT, Category TEXT, Price REAL)")
+        mock_cursor.execute.assert_any_call("PRAGMA table_info(BookRecord)")
+        mock_cursor.execute.assert_any_call("ALTER TABLE BookRecord ADD COLUMN Category TEXT")
+        mock_cursor.execute.assert_any_call("ALTER TABLE BookRecord ADD COLUMN Price REAL")
         self.assertIsNotNone(app.mydb)
         self.assertIsNotNone(app.mycursor)
 

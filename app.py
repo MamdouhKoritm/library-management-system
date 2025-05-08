@@ -1,48 +1,48 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
-import mysql.connector
+import sqlite3
 import sys
 from datetime import datetime, timedelta
 import time
+import os
 
 # Database connection
 def init_db():
+    """Initialize the database connection and create necessary tables."""
     try:
-        mydb = mysql.connector.connect(host="localhost", user="root", passwd="@Mamdouh2")
-        mycursor = mydb.cursor()
-        
-        # Create database if it doesn't exist
-        mycursor.execute("CREATE DATABASE IF NOT EXISTS Library")
-        mycursor.execute("USE Library")
+        # Use SQLite for testing if TEST_MODE is set, otherwise use MySQL
+        if os.getenv("TEST_MODE") == "1":
+            mydb = sqlite3.connect(":memory:")  # In-memory database for testing
+            mycursor = mydb.cursor()
+        else:
+            import mysql.connector
+            mydb = mysql.connector.connect(host="localhost", user="root", passwd="@Mamdouh2")
+            mycursor = mydb.cursor()
+            mycursor.execute("CREATE DATABASE IF NOT EXISTS Library")
+            mycursor.execute("USE Library")
 
-        # Create BookRecord table with correct columns, including Price and increased BookName length
-        mycursor.execute("SHOW TABLES LIKE 'BookRecord'")
+        # Create BookRecord table with correct columns
+        mycursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='BookRecord'")
         if not mycursor.fetchone():
             mycursor.execute("CREATE TABLE BookRecord(" +
-                             "BookID varchar(10) PRIMARY KEY, " +
-                             "BookName varchar(50), " +
-                             "Author varchar(30), " +
-                             "Publisher varchar(30), " +
-                             "Category varchar(20), " +
-                             "Price DECIMAL(10,2)" +
+                             "BookID TEXT PRIMARY KEY, " +
+                             "BookName TEXT, " +
+                             "Author TEXT, " +
+                             "Publisher TEXT, " +
+                             "Category TEXT, " +
+                             "Price REAL" +
                              ")")
             mydb.commit()
 
         # Verify table structure and add Category and Price if missing
-        mycursor.execute("SHOW COLUMNS FROM BookRecord LIKE 'Category'")
-        if not mycursor.fetchone():
-            mycursor.execute("ALTER TABLE BookRecord ADD COLUMN Category varchar(20)")
+        mycursor.execute("PRAGMA table_info(BookRecord)")
+        columns = [col[1] for col in mycursor.fetchall()]
+        if 'Category' not in columns:
+            mycursor.execute("ALTER TABLE BookRecord ADD COLUMN Category TEXT")
             mydb.commit()
         
-        mycursor.execute("SHOW COLUMNS FROM BookRecord LIKE 'Price'")
-        if not mycursor.fetchone():
-            mycursor.execute("ALTER TABLE BookRecord ADD COLUMN Price DECIMAL(10,2)")
-            mydb.commit()
-        
-        mycursor.execute("SHOW COLUMNS FROM BookRecord LIKE 'BookName'")
-        bookname_result = mycursor.fetchone()
-        if bookname_result and bookname_result[1] != 'varchar(50)':
-            mycursor.execute("ALTER TABLE BookRecord MODIFY COLUMN BookName varchar(50)")
+        if 'Price' not in columns:
+            mycursor.execute("ALTER TABLE BookRecord ADD COLUMN Price REAL")
             mydb.commit()
 
         # Check if BookRecord is empty and insert 30 books with prices if it is
@@ -81,70 +81,65 @@ def init_db():
                 ("B029", "Brave New World", "Aldous Huxley", "Chatto & Windus", "Fiction", 9.00),
                 ("B030", "The Origin of Species", "Charles Darwin", "John Murray", "Science", 20.50)
             ]
-            query = "INSERT INTO BookRecord (BookID, BookName, Author, Publisher, Category, Price) VALUES (%s, %s, %s, %s, %s, %s)"
+            query = "INSERT INTO BookRecord (BookID, BookName, Author, Publisher, Category, Price) VALUES (?, ?, ?, ?, ?, ?)"
             mycursor.executemany(query, books)
             mydb.commit()
             print("Inserted 30 books into BookRecord table with prices.")
 
         # Create UserRecord table if it doesn't exist
-        mycursor.execute("SHOW TABLES LIKE 'UserRecord'")
+        mycursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='UserRecord'")
         if not mycursor.fetchone():
             mycursor.execute("CREATE TABLE UserRecord(" +
-                             "UserID varchar(10) PRIMARY KEY, " +
-                             "UserName varchar(20), " +
-                             "Password varchar(20), " +
-                             "BookID varchar(10), " +
-                             "BorrowDate date, " +
-                             "Fine DECIMAL(10,2) DEFAULT 0.00, " +
+                             "UserID TEXT PRIMARY KEY, " +
+                             "UserName TEXT, " +
+                             "Password TEXT, " +
+                             "BookID TEXT, " +
+                             "BorrowDate TEXT, " +
+                             "Fine REAL DEFAULT 0.00, " +
                              "FOREIGN KEY (BookID) REFERENCES BookRecord(BookID)" +
                              ")")
             data = [("101", "Kunal", "1234", None, None, 0.00), 
                     ("102", "Vishal", "3050", None, None, 0.00), 
                     ("103", "Siddhesh", "5010", None, None, 0.00)]
-            query = "INSERT INTO UserRecord VALUES(%s, %s, %s, %s, %s, %s)"
+            query = "INSERT INTO UserRecord VALUES(?, ?, ?, ?, ?, ?)"
             mycursor.executemany(query, data)
             mydb.commit()
         else:
-            mycursor.execute("SHOW COLUMNS FROM UserRecord LIKE 'BorrowDate'")
-            if not mycursor.fetchone():
-                mycursor.execute("ALTER TABLE UserRecord ADD BorrowDate DATE")
+            mycursor.execute("PRAGMA table_info(UserRecord)")
+            columns = [col[1] for col in mycursor.fetchall()]
+            if 'BorrowDate' not in columns:
+                mycursor.execute("ALTER TABLE UserRecord ADD BorrowDate TEXT")
                 mydb.commit()
-            mycursor.execute("SHOW COLUMNS FROM UserRecord LIKE 'Fine'")
-            if not mycursor.fetchone():
-                mycursor.execute("ALTER TABLE UserRecord ADD Fine DECIMAL(10,2) DEFAULT 0.00")
+            if 'Fine' not in columns:
+                mycursor.execute("ALTER TABLE UserRecord ADD Fine REAL DEFAULT 0.00")
                 mydb.commit()
 
         # Create AdminRecord table if it doesn't exist
-        mycursor.execute("SHOW TABLES LIKE 'AdminRecord'")
+        mycursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='AdminRecord'")
         if not mycursor.fetchone():
             mycursor.execute("CREATE TABLE AdminRecord(" +
-                             "AdminID varchar(10) PRIMARY KEY, " +
-                             "Password varchar(20)" +
+                             "AdminID TEXT PRIMARY KEY, " +
+                             "Password TEXT" +
                              ")")
             data = [("Kunal1020", "123"), ("Siddesh510", "786"), ("Vishal305", "675")]
-            query = "INSERT INTO AdminRecord VALUES(%s, %s)"
+            query = "INSERT INTO AdminRecord VALUES(?, ?)"
             mycursor.executemany(query, data)
             mydb.commit()
 
         # Create Feedback table if it doesn't exist
-        mycursor.execute("SHOW TABLES LIKE 'Feedback'")
+        mycursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='Feedback'")
         if not mycursor.fetchone():
             mycursor.execute("CREATE TABLE Feedback(" +
-                             "Feedback varchar(100) PRIMARY KEY, " +
-                             "Rating varchar(10)" +
+                             "Feedback TEXT PRIMARY KEY, " +
+                             "Rating TEXT" +
                              ")")
             mydb.commit()
 
         return mydb, mycursor
 
-    except mysql.connector.Error as e:
-        print("Database connection failed: " + str(e))
-        sys.exit(1)
     except Exception as e:
         print("Unexpected error during database initialization: " + str(e))
         sys.exit(1)
-
-mydb, mycursor = init_db()
 
 # Main Application Window
 class LibraryApp(tk.Tk):
@@ -152,7 +147,15 @@ class LibraryApp(tk.Tk):
         super().__init__()
         self.title("The Book Worm - Library Management System")
         self.geometry("800x600")
-        self.create_login_screen()
+        self.mydb = None
+        self.mycursor = None
+        if not self.mydb:  # Prevent redundant initialization
+            self.initialize_database()
+
+    def initialize_database(self):
+        """Initialize the database connection within the application."""
+        if not self.mydb:  # Only initialize if not already done
+            self.mydb, self.mycursor = init_db()
 
     def clear_window(self):
         for widget in self.winfo_children():
@@ -188,8 +191,8 @@ class LibraryApp(tk.Tk):
         def try_login():
             start_time = time.time()
             attempts[0] -= 1
-            mycursor.execute("SELECT Password FROM AdminRecord WHERE AdminID=%s", (admin_id.get(),))
-            result = mycursor.fetchone()
+            self.mycursor.execute("SELECT Password FROM AdminRecord WHERE AdminID=?", (admin_id.get(),))
+            result = self.mycursor.fetchone()
             if result and result[0] == password.get():
                 if time.time() - start_time > 2:
                     messagebox.showwarning("Performance", "Response took longer than 2 seconds.")
@@ -219,8 +222,8 @@ class LibraryApp(tk.Tk):
         def try_login():
             start_time = time.time()
             attempts[0] -= 1
-            mycursor.execute("SELECT Password, UserID FROM UserRecord WHERE UserID=%s", (user_id.get(),))
-            result = mycursor.fetchone()
+            self.mycursor.execute("SELECT Password, UserID FROM UserRecord WHERE UserID=?", (user_id.get(),))
+            result = self.mycursor.fetchone()
             if result and result[0] == password.get():
                 if time.time() - start_time > 2:
                     messagebox.showwarning("Performance", "Response took longer than 2 seconds.")
@@ -235,8 +238,8 @@ class LibraryApp(tk.Tk):
         tk.Button(frame, text="Back", command=self.create_login_screen).pack(pady=5)
 
     def check_overdue(self, user_id):
-        mycursor.execute("SELECT BookID, BorrowDate, Fine FROM UserRecord WHERE UserID=%s AND BookID IS NOT NULL", (user_id,))
-        result = mycursor.fetchone()
+        self.mycursor.execute("SELECT BookID, BorrowDate, Fine FROM UserRecord WHERE UserID=? AND BookID IS NOT NULL", (user_id,))
+        result = self.mycursor.fetchone()
         if result:
             book_id, borrow_date, fine = result
             if borrow_date:
@@ -247,9 +250,9 @@ class LibraryApp(tk.Tk):
                     days_overdue = (current_date - due_date).days
                     new_fine = days_overdue * 0.50
                     if new_fine > fine:
-                        query = "UPDATE UserRecord SET Fine = %s WHERE UserID = %s"
-                        mycursor.execute(query, (new_fine, user_id))
-                        mydb.commit()
+                        query = "UPDATE UserRecord SET Fine = ? WHERE UserID = ?"
+                        self.mycursor.execute(query, (new_fine, user_id))
+                        self.mydb.commit()
                         messagebox.showwarning("Overdue Alert", "Book ID " + str(book_id) + " is overdue by " + str(days_overdue) + " days. Fine updated to: $" + str(new_fine))
 
     def create_user_account(self):
@@ -271,14 +274,14 @@ class LibraryApp(tk.Tk):
         def create_account():
             start_time = time.time()
             try:
-                query = "INSERT INTO UserRecord VALUES (%s, %s, %s, %s, %s, %s)"
-                mycursor.execute(query, (user_id.get(), user_name.get(), password.get(), None, None, 0.00))
-                mydb.commit()
+                query = "INSERT INTO UserRecord VALUES (?, ?, ?, ?, ?, ?)"
+                self.mycursor.execute(query, (user_id.get(), user_name.get(), password.get(), None, None, 0.00))
+                self.mydb.commit()
                 if time.time() - start_time > 2:
                     messagebox.showwarning("Performance", "Response took longer than 2 seconds.")
                 messagebox.showinfo("Success", "Account created successfully!")
                 self.create_login_screen()
-            except mysql.connector.Error as e:
+            except Exception as e:
                 messagebox.showerror("Error", "Failed to create account: " + str(e))
 
         tk.Button(frame, text="Create Account", command=create_account).pack(pady=10)
@@ -372,17 +375,15 @@ class LibraryApp(tk.Tk):
         def save_book():
             start_time = time.time()
             try:
-                query = "INSERT INTO BookRecord (BookID, BookName, Author, Publisher, Category, Price) VALUES (%s, %s, %s, %s, %s, %s)"
-                mycursor.execute(query, (book_id.get(), book_name.get(), author.get(), publisher.get(), category.get(), float(price.get())))
-                mydb.commit()
+                query = "INSERT INTO BookRecord (BookID, BookName, Author, Publisher, Category, Price) VALUES (?, ?, ?, ?, ?, ?)"
+                self.mycursor.execute(query, (book_id.get(), book_name.get(), author.get(), publisher.get(), category.get(), float(price.get())))
+                self.mydb.commit()
                 if time.time() - start_time > 2:
                     messagebox.showwarning("Performance", "Response took longer than 2 seconds.")
                 messagebox.showinfo("Success", "Book added successfully!")
                 self.book_management()
-            except mysql.connector.Error as e:
+            except Exception as e:
                 messagebox.showerror("Error", "Failed to add book: " + str(e))
-            except ValueError:
-                messagebox.showerror("Error", "Price must be a valid number.")
 
         tk.Button(frame, text="Save", command=save_book).pack(pady=10)
         tk.Button(frame, text="Back", command=self.book_management).pack(pady=5)
@@ -400,17 +401,17 @@ class LibraryApp(tk.Tk):
         def delete():
             start_time = time.time()
             try:
-                query = "DELETE FROM BookRecord WHERE BookID = %s"
-                mycursor.execute(query, (book_id.get(),))
-                mydb.commit()
-                if mycursor.rowcount == 0:
+                query = "DELETE FROM BookRecord WHERE BookID = ?"
+                self.mycursor.execute(query, (book_id.get(),))
+                self.mydb.commit()
+                if self.mycursor.rowcount == 0:
                     messagebox.showerror("Error", "Book ID not found.")
                 else:
                     if time.time() - start_time > 2:
                         messagebox.showwarning("Performance", "Response took longer than 2 seconds.")
                     messagebox.showinfo("Success", "Book deleted successfully!")
                 self.book_management()
-            except mysql.connector.Error as e:
+            except Exception as e:
                 messagebox.showerror("Error", "Failed to delete book: " + str(e))
 
         tk.Button(frame, text="Delete", command=delete).pack(pady=10)
@@ -434,16 +435,16 @@ class LibraryApp(tk.Tk):
         tree.pack(fill="both", expand=True)
 
         try:
-            mycursor.execute("SELECT BookRecord.BookID, BookRecord.BookName, BookRecord.Author, " +
+            self.mycursor.execute("SELECT BookRecord.BookID, BookRecord.BookName, BookRecord.Author, " +
                              "BookRecord.Publisher, BookRecord.Category, BookRecord.Price, " +
                              "UserRecord.UserName, UserRecord.UserID " +
                              "FROM BookRecord LEFT JOIN UserRecord ON BookRecord.BookID=UserRecord.BookID")
-            rows = mycursor.fetchall()
+            rows = self.mycursor.fetchall()
             if not rows:
                 messagebox.showinfo("Info", "No books found in the database.")
             for row in rows:
                 tree.insert("", "end", values=row)
-        except mysql.connector.Error as e:
+        except Exception as e:
             messagebox.showerror("Error", "Failed to fetch books: " + str(e))
 
         tk.Button(frame, text="Back", command=self.book_management).pack(pady=5)
@@ -467,14 +468,14 @@ class LibraryApp(tk.Tk):
         def save_user():
             start_time = time.time()
             try:
-                query = "INSERT INTO UserRecord VALUES (%s, %s, %s, %s, %s, %s)"
-                mycursor.execute(query, (user_id.get(), user_name.get(), password.get(), None, None, 0.00))
-                mydb.commit()
+                query = "INSERT INTO UserRecord VALUES (?, ?, ?, ?, ?, ?)"
+                self.mycursor.execute(query, (user_id.get(), user_name.get(), password.get(), None, None, 0.00))
+                self.mydb.commit()
                 if time.time() - start_time > 2:
                     messagebox.showwarning("Performance", "Response took longer than 2 seconds.")
                 messagebox.showinfo("Success", "User added successfully!")
                 self.user_management()
-            except mysql.connector.Error as e:
+            except Exception as e:
                 messagebox.showerror("Error", "Failed to add user: " + str(e))
 
         tk.Button(frame, text="Save", command=save_user).pack(pady=10)
@@ -493,17 +494,17 @@ class LibraryApp(tk.Tk):
         def remove():
             start_time = time.time()
             try:
-                query = "DELETE FROM UserRecord WHERE UserID = %s"
-                mycursor.execute(query, (user_id.get(),))
-                mydb.commit()
-                if mycursor.rowcount == 0:
+                query = "DELETE FROM UserRecord WHERE UserID = ?"
+                self.mycursor.execute(query, (user_id.get(),))
+                self.mydb.commit()
+                if self.mycursor.rowcount == 0:
                     messagebox.showerror("Error", "User ID not found.")
                 else:
                     if time.time() - start_time > 2:
                         messagebox.showwarning("Performance", "Response took longer than 2 seconds.")
                     messagebox.showinfo("Success", "User removed successfully!")
                 self.user_management()
-            except mysql.connector.Error as e:
+            except Exception as e:
                 messagebox.showerror("Error", "Failed to remove user: " + str(e))
 
         tk.Button(frame, text="Remove", command=remove).pack(pady=10)
@@ -526,15 +527,15 @@ class LibraryApp(tk.Tk):
         tree.pack(fill="both", expand=True)
 
         try:
-            mycursor.execute("SELECT UserRecord.UserID, UserRecord.UserName, UserRecord.Password, " +
+            self.mycursor.execute("SELECT UserRecord.UserID, UserRecord.UserName, UserRecord.Password, " +
                              "BookRecord.BookName, UserRecord.BookID, UserRecord.BorrowDate, UserRecord.Fine " +
                              "FROM UserRecord LEFT JOIN BookRecord ON UserRecord.BookID=BookRecord.BookID")
-            rows = mycursor.fetchall()
+            rows = self.mycursor.fetchall()
             if not rows:
                 messagebox.showinfo("Info", "No users found in the database.")
             for row in rows:
                 tree.insert("", "end", values=row)
-        except mysql.connector.Error as e:
+        except Exception as e:
             messagebox.showerror("Error", "Failed to fetch users: " + str(e))
 
         tk.Button(frame, text="Back", command=self.user_management).pack(pady=5)
@@ -555,24 +556,22 @@ class LibraryApp(tk.Tk):
         def apply():
             start_time = time.time()
             try:
-                mycursor.execute("SELECT Fine FROM UserRecord WHERE UserID = %s", (user_id.get(),))
-                result = mycursor.fetchone()
+                self.mycursor.execute("SELECT Fine FROM UserRecord WHERE UserID = ?", (user_id.get(),))
+                result = self.mycursor.fetchone()
                 if result:
                     current_fine = result[0]
                     new_fine = current_fine + float(penalty.get())
-                    query = "UPDATE UserRecord SET Fine = %s WHERE UserID = %s"
-                    mycursor.execute(query, (new_fine, user_id.get()))
-                    mydb.commit()
+                    query = "UPDATE UserRecord SET Fine = ? WHERE UserID = ?"
+                    self.mycursor.execute(query, (new_fine, user_id.get()))
+                    self.mydb.commit()
                     if time.time() - start_time > 2:
                         messagebox.showwarning("Performance", "Response took longer than 2 seconds.")
                     messagebox.showinfo("Success", "Penalty of $" + str(penalty.get()) + " applied. Total fine: $" + str(new_fine))
                 else:
                     messagebox.showerror("Error", "User ID not found.")
                 self.user_management()
-            except mysql.connector.Error as e:
+            except Exception as e:
                 messagebox.showerror("Error", "Failed to apply penalty: " + str(e))
-            except ValueError:
-                messagebox.showerror("Error", "Penalty must be a valid number.")
 
         tk.Button(frame, text="Apply", command=apply).pack(pady=10)
         tk.Button(frame, text="Back", command=self.user_management).pack(pady=5)
@@ -593,14 +592,14 @@ class LibraryApp(tk.Tk):
         def save_admin():
             start_time = time.time()
             try:
-                query = "INSERT INTO AdminRecord VALUES (%s, %s)"
-                mycursor.execute(query, (admin_id.get(), password.get()))
-                mydb.commit()
+                query = "INSERT INTO AdminRecord VALUES (?, ?)"
+                self.mycursor.execute(query, (admin_id.get(), password.get()))
+                self.mydb.commit()
                 if time.time() - start_time > 2:
                     messagebox.showwarning("Performance", "Response took longer than 2 seconds.")
                 messagebox.showinfo("Success", "Admin added successfully!")
                 self.admin_management()
-            except mysql.connector.Error as e:
+            except Exception as e:
                 messagebox.showerror("Error", "Failed to add admin: " + str(e))
 
         tk.Button(frame, text="Save", command=save_admin).pack(pady=10)
@@ -618,13 +617,13 @@ class LibraryApp(tk.Tk):
         tree.pack(fill="both", expand=True)
 
         try:
-            mycursor.execute("SELECT * FROM AdminRecord")
-            rows = mycursor.fetchall()
+            self.mycursor.execute("SELECT * FROM AdminRecord")
+            rows = self.mycursor.fetchall()
             if not rows:
                 messagebox.showinfo("Info", "No admins found in the database.")
             for row in rows:
                 tree.insert("", "end", values=row)
-        except mysql.connector.Error as e:
+        except Exception as e:
             messagebox.showerror("Error", "Failed to fetch admins: " + str(e))
 
         tk.Button(frame, text="Back", command=self.admin_management).pack(pady=5)
@@ -656,17 +655,17 @@ class LibraryApp(tk.Tk):
             tree.pack(fill="both", expand=True)
 
             search_field = {"Title": "BookName", "Category": "Category"}[search_by.get()]
-            query = "SELECT BookID, BookName, Author, Publisher, Category, Price FROM BookRecord WHERE " + search_field + " LIKE %s"
+            query = "SELECT BookID, BookName, Author, Publisher, Category, Price FROM BookRecord WHERE " + search_field + " LIKE ?"
             try:
-                mycursor.execute(query, ("%" + search_term.get() + "%",))
-                rows = mycursor.fetchall()
+                self.mycursor.execute(query, ("%" + search_term.get() + "%",))
+                rows = self.mycursor.fetchall()
                 if not rows:
                     messagebox.showinfo("Info", "No books found matching your search criteria.")
                 for row in rows:
                     tree.insert("", "end", values=row)
                 if time.time() - start_time > 2:
                     messagebox.showwarning("Performance", "Response took longer than 2 seconds.")
-            except mysql.connector.Error as e:
+            except Exception as e:
                 messagebox.showerror("Error", "Failed to search books: " + str(e))
 
         tk.Button(frame, text="Search", command=perform_search).pack(pady=10)
@@ -688,16 +687,14 @@ class LibraryApp(tk.Tk):
         tree.pack(fill="both", expand=True)
 
         try:
-            mycursor.execute("SELECT BookID, BookName, Author, Publisher, Category, Price FROM BookRecord")
-            rows = mycursor.fetchall()
+            self.mycursor.execute("SELECT BookID, BookName, Author, Publisher, Category, Price FROM BookRecord")
+            rows = self.mycursor.fetchall()
             if not rows:
                 messagebox.showinfo("Info", "No books available in the library. Please check database setup.")
             for row in rows:
                 tree.insert("", "end", values=row)
-        except mysql.connector.Error as e:
-            messagebox.showerror("Error", "Failed to fetch books: " + str(e))
         except Exception as e:
-            messagebox.showerror("Error", "Unexpected error while fetching books: " + str(e))
+            messagebox.showerror("Error", "Failed to fetch books: " + str(e))
 
         tk.Button(frame, text="Back", command=self.user_menu).pack(pady=5)
 
@@ -722,15 +719,15 @@ class LibraryApp(tk.Tk):
         tree.pack(fill="both", expand=True)
 
         try:
-            mycursor.execute("SELECT BookID, BookName, Author, Publisher, Category, Price " +
+            self.mycursor.execute("SELECT BookID, BookName, Author, Publisher, Category, Price " +
                              "FROM BookRecord " +
                              "WHERE BookID NOT IN (SELECT BookID FROM UserRecord WHERE BookID IS NOT NULL)")
-            rows = mycursor.fetchall()
+            rows = self.mycursor.fetchall()
             if not rows:
                 messagebox.showinfo("Info", "No books available to issue.")
             for row in rows:
                 tree.insert("", "end", values=row)
-        except mysql.connector.Error as e:
+        except Exception as e:
             messagebox.showerror("Error", "Failed to fetch available books: " + str(e))
 
         def issue():
@@ -741,25 +738,25 @@ class LibraryApp(tk.Tk):
                 return
             book_id = tree.item(selected_item[0])["values"][0]
             try:
-                mycursor.execute("SELECT BookID FROM UserRecord WHERE UserID=%s", (user_id.get(),))
-                result = mycursor.fetchone()
+                self.mycursor.execute("SELECT BookID FROM UserRecord WHERE UserID=?", (user_id.get(),))
+                result = self.mycursor.fetchone()
                 if result and result[0]:
                     messagebox.showerror("Error", "You already have a book issued. Return it first.")
                     return
-                mycursor.execute("SELECT UserID FROM UserRecord WHERE BookID=%s", (book_id,))
-                if mycursor.fetchone():
+                self.mycursor.execute("SELECT UserID FROM UserRecord WHERE BookID=?", (book_id,))
+                if self.mycursor.fetchone():
                     messagebox.showerror("Error", "Book is already issued.")
                     return
                 borrow_date = datetime.now().strftime("%Y-%m-%d")
-                query = "UPDATE UserRecord SET BookID=%s, BorrowDate=%s WHERE UserID=%s"
-                mycursor.execute(query, (book_id, borrow_date, user_id.get()))
-                mydb.commit()
+                query = "UPDATE UserRecord SET BookID=?, BorrowDate=? WHERE UserID=?"
+                self.mycursor.execute(query, (book_id, borrow_date, user_id.get()))
+                self.mydb.commit()
                 if time.time() - start_time > 2:
                     messagebox.showwarning("Performance", "Response took longer than 2 seconds.")
                 due_date = (datetime.now() + timedelta(days=14)).strftime("%Y-%m-%d")
                 messagebox.showinfo("Success", "Book " + str(book_id) + " issued successfully! Due by " + due_date)
                 self.user_menu()
-            except mysql.connector.Error as e:
+            except Exception as e:
                 messagebox.showerror("Error", "Failed to issue book: " + str(e))
 
         tk.Button(frame, text="Issue", command=issue).pack(pady=10)
@@ -778,8 +775,8 @@ class LibraryApp(tk.Tk):
         def return_book():
             start_time = time.time()
             try:
-                mycursor.execute("SELECT BookID, BorrowDate, Fine FROM UserRecord WHERE UserID=%s AND BookID IS NOT NULL", (user_id.get(),))
-                result = mycursor.fetchone()
+                self.mycursor.execute("SELECT BookID, BorrowDate, Fine FROM UserRecord WHERE UserID=? AND BookID IS NOT NULL", (user_id.get(),))
+                result = self.mycursor.fetchone()
                 if not result:
                     messagebox.showerror("Error", "No book issued to this user.")
                     return
@@ -792,20 +789,20 @@ class LibraryApp(tk.Tk):
                         days_overdue = (current_date - due_date).days
                         new_fine = days_overdue * 0.50
                         if new_fine > fine:
-                            query = "UPDATE UserRecord SET Fine = %s WHERE UserID = %s"
-                            mycursor.execute(query, (new_fine, user_id.get()))
-                            mydb.commit()
+                            query = "UPDATE UserRecord SET Fine = ? WHERE UserID = ?"
+                            self.mycursor.execute(query, (new_fine, user_id.get()))
+                            self.mydb.commit()
                             fine = new_fine
                             messagebox.showwarning("Fine", "Book was overdue by " + str(days_overdue) + " days. Fine updated to: $" + str(fine))
                 
-                query = "UPDATE UserRecord SET BookID=%s, BorrowDate=%s WHERE UserID=%s"
-                mycursor.execute(query, (None, None, user_id.get()))
-                mydb.commit()
+                query = "UPDATE UserRecord SET BookID=?, BorrowDate=? WHERE UserID=?"
+                self.mycursor.execute(query, (None, None, user_id.get()))
+                self.mydb.commit()
                 if time.time() - start_time > 2:
                     messagebox.showwarning("Performance", "Response took longer than 2 seconds.")
                 messagebox.showinfo("Success", "Book " + str(book_id) + " returned successfully! Fine paid: $" + str(fine))
                 self.user_menu()
-            except mysql.connector.Error as e:
+            except Exception as e:
                 messagebox.showerror("Error", "Failed to return book: " + str(e))
 
         tk.Button(frame, text="Return", command=return_book).pack(pady=10)
@@ -836,18 +833,18 @@ class LibraryApp(tk.Tk):
             tree.pack(fill="both", expand=True)
 
             try:
-                mycursor.execute("SELECT UserRecord.UserID, UserRecord.UserName, UserRecord.BookID, " +
+                self.mycursor.execute("SELECT UserRecord.UserID, UserRecord.UserName, UserRecord.BookID, " +
                                  "BookRecord.BookName, UserRecord.BorrowDate, UserRecord.Fine " +
                                  "FROM UserRecord INNER JOIN BookRecord ON UserRecord.BookID=BookRecord.BookID " +
-                                 "WHERE UserRecord.UserID=%s", (user_id.get(),))
-                rows = mycursor.fetchall()
+                                 "WHERE UserRecord.UserID=?", (user_id.get(),))
+                rows = self.mycursor.fetchall()
                 if not rows:
                     messagebox.showinfo("Info", "No books issued to this user.")
                 for row in rows:
                     tree.insert("", "end", values=row)
                 if time.time() - start_time > 2:
                     messagebox.showwarning("Performance", "Response took longer than 2 seconds.")
-            except mysql.connector.Error as e:
+            except Exception as e:
                 messagebox.showerror("Error", "Failed to fetch issued books: " + str(e))
 
         tk.Button(frame, text="Show Issued Books", command=show_issued).pack(pady=10)
@@ -869,14 +866,14 @@ class LibraryApp(tk.Tk):
         def save_feedback():
             start_time = time.time()
             try:
-                query = "INSERT INTO Feedback VALUES (%s, %s)"
-                mycursor.execute(query, (feedback.get(), rating.get()))
-                mydb.commit()
+                query = "INSERT INTO Feedback VALUES (?, ?)"
+                self.mycursor.execute(query, (feedback.get(), rating.get()))
+                self.mydb.commit()
                 if time.time() - start_time > 2:
                     messagebox.showwarning("Performance", "Response took longer than 2 seconds.")
                 messagebox.showinfo("Success", "Feedback submitted successfully!")
                 self.user_menu()
-            except mysql.connector.Error as e:
+            except Exception as e:
                 messagebox.showerror("Error", "Failed to submit feedback: " + str(e))
 
         tk.Button(frame, text="Submit", command=save_feedback).pack(pady=10)
@@ -894,13 +891,13 @@ class LibraryApp(tk.Tk):
         tree.pack(fill="both", expand=True)
 
         try:
-            mycursor.execute("SELECT * FROM Feedback")
-            rows = mycursor.fetchall()
+            self.mycursor.execute("SELECT * FROM Feedback")
+            rows = self.mycursor.fetchall()
             if not rows:
                 messagebox.showinfo("Info", "No feedback available.")
             for row in rows:
                 tree.insert("", "end", values=row)
-        except mysql.connector.Error as e:
+        except Exception as e:
             messagebox.showerror("Error", "Failed to fetch feedback: " + str(e))
 
         tk.Button(frame, text="Back", command=self.admin_menu).pack(pady=5)
@@ -928,17 +925,17 @@ class LibraryApp(tk.Tk):
         tree.pack(fill="both", expand=True)
 
         try:
-            mycursor.execute("SELECT BookRecord.BookID, BookRecord.BookName, " +
+            self.mycursor.execute("SELECT BookRecord.BookID, BookRecord.BookName, " +
                              "COUNT(UserRecord.BookID) as TimesIssued " +
                              "FROM BookRecord LEFT JOIN UserRecord " +
                              "ON BookRecord.BookID=UserRecord.BookID " +
                              "GROUP BY BookRecord.BookID, BookRecord.BookName")
-            rows = mycursor.fetchall()
+            rows = self.mycursor.fetchall()
             if not rows:
                 messagebox.showinfo("Info", "No book usage data available.")
             for row in rows:
                 tree.insert("", "end", values=row)
-        except mysql.connector.Error as e:
+        except Exception as e:
             messagebox.showerror("Error", "Failed to generate report: " + str(e))
 
         tk.Button(frame, text="Back", command=self.generate_reports).pack(pady=5)
@@ -960,12 +957,12 @@ class LibraryApp(tk.Tk):
         tree.pack(fill="both", expand=True)
 
         try:
-            mycursor.execute("SELECT UserRecord.UserID, UserRecord.UserName, UserRecord.BookID, " +
+            self.mycursor.execute("SELECT UserRecord.UserID, UserRecord.UserName, UserRecord.BookID, " +
                              "BookRecord.BookName, UserRecord.BorrowDate " +
                              "FROM UserRecord INNER JOIN BookRecord " +
                              "ON UserRecord.BookID=BookRecord.BookID")
             current_date = datetime.now()
-            rows = mycursor.fetchall()
+            rows = self.mycursor.fetchall()
             if not rows:
                 messagebox.showinfo("Info", "No overdue books found.")
             for row in rows:
@@ -977,7 +974,7 @@ class LibraryApp(tk.Tk):
                         days_overdue = (current_date - due_date).days
                         fine = days_overdue * 0.50
                         tree.insert("", "end", values=(row[0], row[1], row[2], row[3], days_overdue, str(fine)))
-        except mysql.connector.Error as e:
+        except Exception as e:
             messagebox.showerror("Error", "Failed to generate report: " + str(e))
 
         tk.Button(frame, text="Back", command=self.generate_reports).pack(pady=5)
