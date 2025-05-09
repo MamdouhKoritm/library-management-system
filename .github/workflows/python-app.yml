@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  test-gui-operations:
+  test-gui:
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -21,7 +21,8 @@ jobs:
           --health-cmd="mysqladmin ping --silent"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=3
+          --health-retries=5
+        command: --default-authentication-plugin=mysql_native_password bash -c "while ! mysqladmin ping -hlocalhost --silent; do sleep 2; done; mysql -uroot -p${MYSQL_ROOT_PASSWORD} -e \"GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}'; FLUSH PRIVILEGES;\""
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -41,14 +42,25 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Wait for MySQL to be ready and configure
+    - name: Wait for MySQL to be ready
       run: |
-        while ! mysqladmin ping -hlocalhost -uroot -p@Mamdouh2 --silent; do
-          echo "Waiting for MySQL..."
-          sleep 2
+        for i in {1..30}; do
+          if mysqladmin ping -hlocalhost -uroot -p@Mamdouh2 --silent; then
+            echo "MySQL is ready!"
+            break
+          else
+            echo "Waiting for MySQL... (Attempt $i/30)"
+            sleep 2
+          fi
         done
-        echo "MySQL is ready!"
-        mysql -hlocalhost -uroot -p@Mamdouh2 -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+        if [ $i -eq 30 ]; then
+          echo "Error: MySQL failed to start after 60 seconds."
+          exit 1
+        fi
+
+    - name: Lint with pylint
+      run: |
+        pylint app.py --max-line-length=120 --fail-under=8
 
     - name: Run GUI tests with coverage
       env:
@@ -58,6 +70,11 @@ jobs:
         coverage xml -o coverage_gui.xml
         coverage report --fail-under=20
 
+    - name: Verify imports
+      run: |
+        python -c "import tkinter; print('Tkinter imported successfully')"
+        python -c "import mysql.connector; print('MySQL Connector imported successfully')"
+
     - name: Upload GUI coverage report
       uses: codecov/codecov-action@v4
       with:
@@ -66,7 +83,7 @@ jobs:
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-  test-db-operations:
+  test-db:
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -80,7 +97,8 @@ jobs:
           --health-cmd="mysqladmin ping --silent"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=3
+          --health-retries=5
+        command: --default-authentication-plugin=mysql_native_password bash -c "while ! mysqladmin ping -hlocalhost --silent; do sleep 2; done; mysql -uroot -p${MYSQL_ROOT_PASSWORD} -e \"GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}'; FLUSH PRIVILEGES;\""
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -100,14 +118,25 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Wait for MySQL to be ready and configure
+    - name: Wait for MySQL to be ready
       run: |
-        while ! mysqladmin ping -hlocalhost -uroot -p@Mamdouh2 --silent; do
-          echo "Waiting for MySQL..."
-          sleep 2
+        for i in {1..30}; do
+          if mysqladmin ping -hlocalhost -uroot -p@Mamdouh2 --silent; then
+            echo "MySQL is ready!"
+            break
+          else
+            echo "Waiting for MySQL... (Attempt $i/30)"
+            sleep 2
+          fi
         done
-        echo "MySQL is ready!"
-        mysql -hlocalhost -uroot -p@Mamdouh2 -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+        if [ $i -eq 30 ]; then
+          echo "Error: MySQL failed to start after 60 seconds."
+          exit 1
+        fi
+
+    - name: Lint with pylint
+      run: |
+        pylint app.py --max-line-length=120 --fail-under=8
 
     - name: Run DB tests with coverage
       env:
@@ -116,6 +145,11 @@ jobs:
         xvfb-run --auto-servernum coverage run -m unittest test_db_operations.py
         coverage xml -o coverage_db.xml
         coverage report --fail-under=20
+
+    - name: Verify imports
+      run: |
+        python -c "import tkinter; print('Tkinter imported successfully')"
+        python -c "import mysql.connector; print('MySQL Connector imported successfully')"
 
     - name: Upload DB coverage report
       uses: codecov/codecov-action@v4
