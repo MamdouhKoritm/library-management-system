@@ -18,7 +18,7 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping --silent"
+          --health-cmd="mysqladmin ping -hlocalhost -uroot -p@Mamdouh2 --silent"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -41,19 +41,24 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: Debug MySQL container status
+      run: |
+        docker ps -a
+        docker logs $(docker ps -a -q --filter "ancestor=mysql:8.0") || echo "No MySQL container logs available"
+
     - name: Wait for MySQL to be ready
       run: |
-        for i in {1..30}; do
+        for i in {1..45}; do
           if mysqladmin ping -hlocalhost -uroot -p@Mamdouh2 --silent; then
             echo "MySQL is ready!"
             break
           else
-            echo "Waiting for MySQL... (Attempt $i/30)"
+            echo "Waiting for MySQL... (Attempt $i/45)"
             sleep 2
           fi
         done
-        if [ $i -eq 30 ]; then
-          echo "Error: MySQL failed to start after 60 seconds."
+        if [ $i -eq 45 ]; then
+          echo "Error: MySQL failed to start after 90 seconds."
           exit 1
         fi
 
@@ -97,7 +102,7 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping --silent"
+          --health-cmd="mysqladmin ping -hlocalhost -uroot -p@Mamdouh2 --silent"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -120,19 +125,24 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: Debug MySQL container status
+      run: |
+        docker ps -a
+        docker logs $(docker ps -a -q --filter "ancestor=mysql:8.0") || echo "No MySQL container logs available"
+
     - name: Wait for MySQL to be ready
       run: |
-        for i in {1..30}; do
+        for i in {1..45}; do
           if mysqladmin ping -hlocalhost -uroot -p@Mamdouh2 --silent; then
             echo "MySQL is ready!"
             break
           else
-            echo "Waiting for MySQL... (Attempt $i/30)"
+            echo "Waiting for MySQL... (Attempt $i/45)"
             sleep 2
           fi
         done
-        if [ $i -eq 30 ]; then
-          echo "Error: MySQL failed to start after 60 seconds."
+        if [ $i -eq 45 ]; then
+          echo "Error: MySQL failed to start after 90 seconds."
           exit 1
         fi
 
