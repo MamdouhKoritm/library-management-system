@@ -27,9 +27,8 @@ Thumbs.db
 coverage.xml
 *.cover
 *.log
-__pycache__/
-*.pyc
-.venv/
 .pytest_cache/
-.coverage
-*.egg-info/
+.venv/
+
+# Ensure test files are not ignored (no need to add, just verify)
+# test_db_operations.py and test_gui_operations.py should remain tracked
