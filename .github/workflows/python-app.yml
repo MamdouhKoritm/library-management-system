@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       mysql:
-        image: mysql:8.0
+        image: mysql:5.7
         env:
           MYSQL_ROOT_PASSWORD: "@Mamdouh2"
           MYSQL_DATABASE: Library
@@ -22,6 +22,7 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
+          --shm-size=1g
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -44,7 +45,7 @@ jobs:
     - name: Debug MySQL container status
       run: |
         docker ps -a
-        docker logs $(docker ps -a -q --filter "ancestor=mysql:8.0") || echo "No MySQL container logs available"
+        docker logs $(docker ps -a -q --filter "ancestor=mysql:5.7") || echo "No MySQL container logs available"
 
     - name: Wait for MySQL to be ready
       run: |
@@ -95,7 +96,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       mysql:
-        image: mysql:8.0
+        image: mysql:5.7
         env:
           MYSQL_ROOT_PASSWORD: "@Mamdouh2"
           MYSQL_DATABASE: Library
@@ -106,6 +107,7 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
+          --shm-size=1g
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -128,7 +130,7 @@ jobs:
     - name: Debug MySQL container status
       run: |
         docker ps -a
-        docker logs $(docker ps -a -q --filter "ancestor=mysql:8.0") || echo "No MySQL container logs available"
+        docker logs $(docker ps -a -q --filter "ancestor=mysql:5.7") || echo "No MySQL container logs available"
 
     - name: Wait for MySQL to be ready
       run: |
