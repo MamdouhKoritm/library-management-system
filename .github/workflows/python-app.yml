@@ -7,13 +7,13 @@ on:
     branches: [ main ]
 
 jobs:
-  test-gui-operations:
+  test-gui:
     runs-on: ubuntu-latest
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: "@Mamdouh2"  # Match app.py's hardcoded password
+          MYSQL_ROOT_PASSWORD: "@Mamdouh2"
           MYSQL_DATABASE: Library
         ports:
           - 3306:3306
@@ -66,7 +66,6 @@ jobs:
       run: |
         python -c "import tkinter; print('Tkinter imported successfully')"
         python -c "import mysql.connector; print('MySQL Connector imported successfully')"
-        python -c "import dotenv; print('python-dotenv imported successfully')"
 
     - name: Upload GUI coverage report
       uses: codecov/codecov-action@v4
@@ -76,13 +75,13 @@ jobs:
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-  test-db-operations:
+  test-db:
     runs-on: ubuntu-latest
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: "@Mamdouh2"  # Match app.py's hardcoded password
+          MYSQL_ROOT_PASSWORD: "@Mamdouh2"
           MYSQL_DATABASE: Library
         ports:
           - 3306:3306
@@ -135,10 +134,9 @@ jobs:
       run: |
         python -c "import tkinter; print('Tkinter imported successfully')"
         python -c "import mysql.connector; print('MySQL Connector imported successfully')"
-        python -c "import dotenv; print('python-dotenv imported successfully')"
 
     - name: Upload DB coverage report
-      uses: codecov/codecov-action@v4
+      uses: actions/checkout@v4
       with:
         files: ./coverage_db.xml
         fail_ci_if_error: true
