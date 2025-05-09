@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  test-gui:
+  test-gui-operations:
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -22,7 +22,7 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=3
-        command: --default-authentication-plugin=mysql_native_password bash -c "while ! mysqladmin ping -hlocalhost --silent; do sleep 1; done; mysql -uroot -p@Mamdouh2 -e \"GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '@Mamdouh2'; FLUSH PRIVILEGES;\""
+          --default-authentication-plugin=mysql_native_password
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -49,6 +49,7 @@ jobs:
           sleep 2
         done
         echo "MySQL is ready!"
+        mysql -hlocalhost -uroot -p@Mamdouh2 -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '@Mamdouh2'; FLUSH PRIVILEGES;"
 
     - name: Lint with pylint
       run: |
@@ -66,6 +67,7 @@ jobs:
       run: |
         python -c "import tkinter; print('Tkinter imported successfully')"
         python -c "import mysql.connector; print('MySQL Connector imported successfully')"
+        python -c "import dotenv; print('python-dotenv imported successfully')"
 
     - name: Upload GUI coverage report
       uses: codecov/codecov-action@v4
@@ -75,7 +77,7 @@ jobs:
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-  test-db:
+  test-db-operations:
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -90,7 +92,7 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=3
-        command: --default-authentication-plugin=mysql_native_password bash -c "while ! mysqladmin ping -hlocalhost --silent; do sleep 1; done; mysql -uroot -p@Mamdouh2 -e \"GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '@Mamdouh2'; FLUSH PRIVILEGES;\""
+          --default-authentication-plugin=mysql_native_password
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -117,6 +119,7 @@ jobs:
           sleep 2
         done
         echo "MySQL is ready!"
+        mysql -hlocalhost -uroot -p@Mamdouh2 -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '@Mamdouh2'; FLUSH PRIVILEGES;"
 
     - name: Lint with pylint
       run: |
@@ -134,9 +137,10 @@ jobs:
       run: |
         python -c "import tkinter; print('Tkinter imported successfully')"
         python -c "import mysql.connector; print('MySQL Connector imported successfully')"
+        python -c "import dotenv; print('python-dotenv imported successfully')"
 
     - name: Upload DB coverage report
-      uses: actions/checkout@v4
+      uses: codecov/codecov-action@v4
       with:
         files: ./coverage_db.xml
         fail_ci_if_error: true
