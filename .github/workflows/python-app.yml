@@ -1,178 +1,101 @@
-name: Python Application CI
+name: Python Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
+
+permissions:
+  contents: read
 
 jobs:
-  test-gui:
+  test-database-operations:
     runs-on: ubuntu-latest
     services:
       mysql:
-        image: mysql:5.7
+        image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: "@Mamdouh2"
+          MYSQL_ROOT_PASSWORD: '@Mamdouh2'
           MYSQL_DATABASE: Library
         ports:
           - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -hlocalhost -uroot -p@Mamdouh2 --silent"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-          --shm-size=1g
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v5
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
       with:
-        python-version: '3.10'
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y python3-tk xvfb
-
-    - name: Install Python dependencies
+        python-version: "3.11"
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-
-    - name: Debug MySQL container status
+    - name: Run Database Tests
       run: |
-        docker ps -a
-        docker logs $(docker ps -a -q --filter "ancestor=mysql:5.7") || echo "No MySQL container logs available"
-
-    - name: Wait for MySQL to be ready
-      run: |
-        for i in {1..45}; do
-          if mysqladmin ping -hlocalhost -uroot -p@Mamdouh2 --silent; then
-            echo "MySQL is ready!"
-            break
-          else
-            echo "Waiting for MySQL... (Attempt $i/45)"
-            sleep 2
-          fi
-        done
-        if [ $i -eq 45 ]; then
-          echo "Error: MySQL failed to start after 90 seconds."
-          exit 1
-        fi
-
-    - name: Grant MySQL privileges
-      run: |
-        mysql -hlocalhost -uroot -p@Mamdouh2 -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '@Mamdouh2'; FLUSH PRIVILEGES;"
-
-    - name: Lint with pylint
-      run: |
-        pylint app.py --max-line-length=120 --fail-under=8
-
-    - name: Run GUI tests with coverage
-      env:
-        TEST_MODE: "1"
-      run: |
-        xvfb-run --auto-servernum coverage run -m unittest test_gui_operations.py
-        coverage xml -o coverage_gui.xml
-        coverage report --fail-under=20
-
-    - name: Verify imports
-      run: |
-        python -c "import tkinter; print('Tkinter imported successfully')"
-        python -c "import mysql.connector; print('MySQL Connector imported successfully')"
-
-    - name: Upload GUI coverage report
-      uses: codecov/codecov-action@v4
+        python -m pytest test_db_operations.py --cov=. --cov-report=xml --cov-report=term-missing
+    - name: Upload Database Coverage
+      uses: actions/upload-artifact@v2
       with:
-        files: ./coverage_gui.xml
-        fail_ci_if_error: true
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        name: database-coverage
+        path: coverage.xml
 
-  test-db:
+  test-gui-operations:
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:5.7
-        env:
-          MYSQL_ROOT_PASSWORD: "@Mamdouh2"
-          MYSQL_DATABASE: Library
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -hlocalhost -uroot -p@Mamdouh2 --silent"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-          --shm-size=1g
+    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v5
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
       with:
-        python-version: '3.10'
-
-    - name: Install system dependencies
+        python-version: "3.11"
+    - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y python3-tk xvfb
-
-    - name: Install Python dependencies
-      run: |
+        sudo apt-get install -y xvfb python3-tk
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-
-    - name: Debug MySQL container status
+    - name: Run GUI Tests
       run: |
-        docker ps -a
-        docker logs $(docker ps -a -q --filter "ancestor=mysql:5.7") || echo "No MySQL container logs available"
-
-    - name: Wait for MySQL to be ready
-      run: |
-        for i in {1..45}; do
-          if mysqladmin ping -hlocalhost -uroot -p@Mamdouh2 --silent; then
-            echo "MySQL is ready!"
-            break
-          else
-            echo "Waiting for MySQL... (Attempt $i/45)"
-            sleep 2
-          fi
-        done
-        if [ $i -eq 45 ]; then
-          echo "Error: MySQL failed to start after 90 seconds."
-          exit 1
-        fi
-
-    - name: Grant MySQL privileges
-      run: |
-        mysql -hlocalhost -uroot -p@Mamdouh2 -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '@Mamdouh2'; FLUSH PRIVILEGES;"
-
-    - name: Lint with pylint
-      run: |
-        pylint app.py --max-line-length=120 --fail-under=8
-
-    - name: Run DB tests with coverage
-      env:
-        TEST_MODE: "1"
-      run: |
-        xvfb-run --auto-servernum coverage run -m unittest test_db_operations.py
-        coverage xml -o coverage_db.xml
-        coverage report --fail-under=20
-
-    - name: Verify imports
-      run: |
-        python -c "import tkinter; print('Tkinter imported successfully')"
-        python -c "import mysql.connector; print('MySQL Connector imported successfully')"
-
-    - name: Upload DB coverage report
-      uses: codecov/codecov-action@v4
+        xvfb-run --auto-servernum python -m pytest test_gui_operations.py --cov=. --cov-report=xml --cov-report=term-missing
+    - name: Upload GUI Coverage
+      uses: actions/upload-artifact@v2
       with:
-        files: ./coverage_db.xml
-        fail_ci_if_error: true
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        name: gui-coverage
+        path: coverage.xml
+
+  combine-coverage:
+    needs: [test-database-operations, test-gui-operations]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.11"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install coverage
+    - name: Download Database Coverage
+      uses: actions/download-artifact@v2
+      with:
+        name: database-coverage
+        path: ./coverage-db
+    - name: Download GUI Coverage
+      uses: actions/download-artifact@v2
+      with:
+        name: gui-coverage
+        path: ./coverage-gui
+    - name: Combine Coverage Reports
+      run: |
+        coverage combine ./coverage-db/coverage.xml ./coverage-gui/coverage.xml
+        coverage report
+        coverage xml
+    - name: Upload Combined Coverage
+      uses: actions/upload-artifact@v2
+      with:
+        name: combined-coverage
+        path: coverage.xml

@@ -123,16 +123,17 @@ def init_db():
                 mydb.commit()
 
         # Create AdminRecord table if it doesn't exist
-        mycursor.execute("SHOW TABLES LIKE 'AdminRecord'")
-        if not mycursor.fetchone():
-            mycursor.execute("CREATE TABLE AdminRecord(" +
-                             "AdminID varchar(10) PRIMARY KEY, " +
-                             "Password varchar(20)" +
-                             ")")
-            data = [("Kunal1020", "123"), ("Siddesh510", "786"), ("Vishal305", "675")]
-            query = "INSERT INTO AdminRecord VALUES(%s, %s)"
-            mycursor.executemany(query, data)
-            mydb.commit()
+        mycursor.execute("DROP TABLE IF EXISTS AdminRecord")
+        mycursor.execute("CREATE TABLE AdminRecord(" +
+                         "AdminID varchar(10) PRIMARY KEY, " +
+                         "Password varchar(20)" +
+                         ")")
+        print("Creating admin credentials...")
+        data = [("Kunal1020", "123"), ("Siddesh510", "786"), ("Vishal305", "675")]
+        query = "INSERT INTO AdminRecord VALUES(%s, %s)"
+        mycursor.executemany(query, data)
+        mydb.commit()
+        print("Admin credentials created successfully.")
 
         # Create Feedback table if it doesn't exist
         mycursor.execute("SHOW TABLES LIKE 'Feedback'")
