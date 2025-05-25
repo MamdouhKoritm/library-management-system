@@ -23,9 +23,9 @@ jobs:
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v5
       with:
         python-version: "3.11"
     - name: Install dependencies
@@ -36,7 +36,7 @@ jobs:
       run: |
         python -m pytest test_db_operations.py --cov=. --cov-report=xml --cov-report=term-missing
     - name: Upload Database Coverage
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: database-coverage
         path: coverage.xml
@@ -45,9 +45,9 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v5
       with:
         python-version: "3.11"
     - name: Install dependencies
@@ -60,7 +60,7 @@ jobs:
       run: |
         xvfb-run --auto-servernum python -m pytest test_gui_operations.py --cov=. --cov-report=xml --cov-report=term-missing
     - name: Upload GUI Coverage
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: gui-coverage
         path: coverage.xml
@@ -70,9 +70,9 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v5
       with:
         python-version: "3.11"
     - name: Install dependencies
@@ -80,12 +80,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install coverage
     - name: Download Database Coverage
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
         name: database-coverage
         path: ./coverage-db
     - name: Download GUI Coverage
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
         name: gui-coverage
         path: ./coverage-gui
@@ -95,7 +95,7 @@ jobs:
         coverage report
         coverage xml
     - name: Upload Combined Coverage
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: combined-coverage
         path: coverage.xml
